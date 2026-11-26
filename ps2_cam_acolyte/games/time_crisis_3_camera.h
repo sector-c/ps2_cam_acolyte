@@ -22,6 +22,7 @@ struct sample {
     std::array<uint32_t,3> refs{};
     uint32_t header{}, clock{}, cursor{}, start{}, duration{};
     words streams{}, modes{}, constants{}, output{};
+    std::array<double,16> world{}, local{};
 };
 inline bool original_modes(const words& m) {
     // Additional mission families observed on original US retail runtime.
@@ -42,8 +43,7 @@ inline bool layout(const sample& s) {
 inline bool same_track(const sample& a,const sample& b) {
     return layout(a) && layout(b) && a.header==b.header &&
            a.streams==b.streams && a.start==b.start &&
-           a.duration==b.duration && uint32_t(b.clock-a.clock)<0x80000000u &&
-           b.cursor>=a.cursor;
+           a.duration==b.duration && uint32_t(b.clock-a.clock)<0x80000000u; // Cursor may decrease on cover reversal.
 }
 inline bool owned(const sample& original,const sample& now,const words& last) {
     return same_track(original,now) && now.modes==held && now.constants==last;
@@ -61,6 +61,25 @@ inline pose decode(const words& v) {
     for (unsigned i=0;i<3;++i) p[i]=signed_word(v[i])/scale;
     for (unsigned i=3;i<6;++i) p[i]=signed_angle(v[i])*2*pi/turn;
     return p;
+}
+inline bool pose_matches(const words& a,const words& b) {
+    for(unsigned i=0;i<6;++i) {
+        if(i<3) { if(std::abs(double(signed_word(a[i]))-signed_word(b[i]))>256.)return false; }
+        else if(std::abs(signed_angle(a[i]-b[i]))>18)return false;
+    }
+    return true;
+}
+inline bool matrix_matches(const sample& s,const pose& p) {
+    const auto sx=std::sin(p[3]),cx=std::cos(p[3]),sy=std::sin(p[4]),cy=std::cos(p[4]),sz=std::sin(p[5]),cz=std::cos(p[5]);
+    const std::array<double,16> expected{cz*cy+sz*sx*sy,sz*cx,-cz*sy+sz*sx*cy,0,
+        -sz*cy+cz*sx*sy,cz*cx,sz*sy+cz*sx*cy,0,
+        cx*sy,-sx,cx*cy,0,p[0],p[1],p[2],1};
+    for(unsigned i=0;i<16;++i) {
+        const double tol=i>=12&&i<=14?.02:.002;
+        if(!std::isfinite(s.world[i])||!std::isfinite(s.local[i])||
+           std::abs(s.world[i]-expected[i])>tol||std::abs(s.local[i]-expected[i])>tol)return false;
+    }
+    return true;
 }
 inline bool encode(const pose& p,words& out) {
     for (double x:p) if (!std::isfinite(x)) return false;

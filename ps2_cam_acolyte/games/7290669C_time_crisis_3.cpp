@@ -9,6 +9,7 @@
 #include <bcrypt.h>
 #include <cstring>
 #include <chrono>
+#include <thread>
 #include <cstdio>
 #include <stdexcept>
 #include <memory>
@@ -64,6 +65,8 @@ public:
             if(i<3)ipc.Read<uint32_t,true>(addr(tc::context+4*i));
             else ipc.Read<uint16_t,true>(addr(tc::context+12+2*(i-3)));
         }
+        for(auto base:{0x00441a50u,tc::context+0xc50})
+            for(unsigned i=0;i<16;++i)ipc.Read<uint32_t,true>(addr(base+4*i));
         batch b(ipc);ipc.SendCommand(b.value);
         tc::sample s;
         for(int i=0;i<3;++i)s.refs[i]=word(b,i);
@@ -74,6 +77,11 @@ public:
             s.streams[i]=word(b,k);s.modes[i]=word(b,k+1);
             s.constants[i]=i<3?word(b,k+2):half(b,k+2);
             s.output[i]=i<3?word(b,k+3):half(b,k+3);
+        }
+        for(unsigned i=0;i<16;++i) {
+            uint32_t w=word(b,32+i),l=word(b,48+i);float wf,lf;
+            std::memcpy(&wf,&w,4);std::memcpy(&lf,&l,4);
+            s.world[i]=wf;s.local[i]=lf;
         }
         return s;
     }
@@ -152,6 +160,18 @@ class time_crisis_3 final : public ps2_game {
     double activation_ms=0;
     unsigned writes=0;
     bool paused_notice=false;
+    void log_pose(const char* label,const tc::sample& a) {
+        const auto p=tc::decode(a.output);
+        std::printf("TC3 %s clock=%u cursor=%u XYZ %.3f %.3f %.3f matrix %.3f %.3f %.3f\\n",label,a.clock,a.cursor,p[0],p[1],p[2],a.world[12],a.world[13],a.world[14]);
+    }
+    void recover_native() {
+        if(!fault||enabled)return;
+        io.verify_revision();if(!io.running())return;
+        const auto a=io.read();if(!tc::layout(a)||!tc::original_modes(a.modes)||!io.packed_layout(a))return;
+        const auto b=io.read();if(tc::same_track(a,b)&&a.modes==b.modes&&tc::matrix_matches(b,tc::decode(b.output))) {
+            fault=false;report("Native camera recovered. Enable again in gameplay.");
+        }
+    }
     std::string status="Ready. Start gameplay, then press A or Enable.";
     void report(const char* s){status=s;dirty=true;}
     void enable() {
@@ -166,7 +186,10 @@ class time_crisis_3 final : public ps2_game {
         const auto b=io.read();
         require(tc::same_track(a,b)&&a.modes==b.modes,
                 "Camera changed during activation; retry in a stable scene");
+        require(tc::pose_matches(a.output,b.output)&&tc::matrix_matches(b,tc::decode(b.output)),
+                "Native camera is changing or not synchronized; retry in a stable cover scene");
         target=tc::decode(b.output);
+        log_pose("native activation",b);
         tc::words initial{};
         require(tc::encode(target,initial),"Camera pose outside qualified bounds");
         original=previous=b;
@@ -178,6 +201,26 @@ class time_crisis_3 final : public ps2_game {
         const auto after=io.read();
         require(tc::owned(original,after,initial),"Camera ownership could not be verified; restart game");
         last=initial;previous=after;enabled=true;fault=false;
+        bool verified=false;
+        const auto deadline=std::chrono::steady_clock::now()+std::chrono::milliseconds(250);
+        while(std::chrono::steady_clock::now()<deadline) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            io.identity();const auto now=io.read();
+            if(!tc::owned(previous,now,last)) {
+                enabled=false;fault=!tc::layout(now)||!tc::original_modes(now.modes);
+                throw std::runtime_error("Native camera changed during activation; no stale writes");
+            }
+            previous=now;
+            if(uint32_t(now.clock-b.clock)>=3) {
+                log_pose("observed activation",now);
+                if(tc::pose_matches(now.output,initial)&&tc::matrix_matches(now,target)) {verified=true;break;}
+                if(uint32_t(now.clock-b.clock)>=6)break;
+            }
+        }
+        if(!verified) {
+            disable();
+            throw std::runtime_error("Activation pose not preserved; override stopped");
+        }
         activation_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-begin).count();
         writes=0;paused_notice=false;
         report("Freecam active (experimental gameplay camera).");
@@ -189,7 +232,7 @@ class time_crisis_3 final : public ps2_game {
         const auto now=io.read();
         if(!tc::owned(previous,now,last)) {
             enabled=false;
-            fault=tc::same_track(previous,now)||!tc::original_modes(now.modes);
+            fault=!tc::layout(now)||!tc::original_modes(now.modes);
             report(fault?"Camera ownership lost; restart the game before retrying.":
                          "Native camera replaced the track; no stale writes made.");
             return;
@@ -210,7 +253,7 @@ public:
     void draw_game_ui(const pcsx2&,const controller& c,playback& replay) override {
         ImGui::TextUnformatted(status.c_str());
         ImGui::TextWrapped("Experimental US retail support. Keep PCSX2 running. Camera affects gameplay aim; do not shoot while exploring.");
-        if(!fault&&ImGui::Button(enabled?"Disable Freecam":"Enable Freecam"))toggle_requested=true;
+        if(ImGui::Button(fault?"Check native camera":enabled?"Disable Freecam":"Enable Freecam"))toggle_requested=true;
         ImGui::Text("Controller: %s toggles freecam",c.get_button_display_name(controller_bindings::freecam));
         ImGui::TextUnformatted("Left stick: move | Right stick: look | Triggers: elevation | LB/RB: roll");
         ImGui::SliderFloat("Speed",&speed,.25f,20.f);
@@ -227,13 +270,16 @@ public:
             if(ImGui::Button("Yaw -10"))nudge=8;
         }
         replay.draw_playback_ui(c);
-        if(fault)ImGui::TextWrapped("Restart the game to clear an uncertain override. No automatic writes will be attempted.");
+        if(fault)ImGui::TextWrapped("After a mission restart, check native camera. If recovery stays blocked, restart the game. No automatic writes.");
     }
     void update(const pcsx2&,const controller_state& c,playback& replay,float dt) override {
         try {
             bool toggle=toggle_requested||c.button_down(controller_bindings::freecam);
             toggle_requested=false;
-            if(fault)return;
+            if(fault) {
+                if(toggle)recover_native();
+                return;
+            }
             if(toggle){if(enabled)disable();else enable();return;}
             if(!enabled)return;
             io.identity();
@@ -245,7 +291,7 @@ public:
             if(paused_notice){paused_notice=false;report("Freecam active (experimental gameplay camera).");}
             const auto now=io.read();
             if(!tc::owned(previous,now,last)) {
-                enabled=false;fault=tc::same_track(previous,now)||!tc::original_modes(now.modes);
+                enabled=false;fault=!tc::layout(now)||!tc::original_modes(now.modes);
                 report(fault?"Camera ownership lost; restart game.":
                              "Scene changed; enable again in the new scene.");
                 return;

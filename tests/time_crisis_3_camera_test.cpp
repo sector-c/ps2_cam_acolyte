@@ -28,8 +28,12 @@ int main(){
     a.streams[1]+=2;assert(!tc::owned(s,a,w));
     a=s;a.modes=tc::held;a.constants=w;a.clock--;assert(!tc::owned(s,a,w));
     a=s;a.modes=tc::held;a.constants=w;a.constants[0]++;assert(!tc::owned(s,a,w));
-    a=s;a.modes=tc::held;a.constants=w;a.cursor--;assert(!tc::owned(s,a,w));
+    a=s;a.modes=tc::held;a.constants=w;a.cursor--;assert(tc::owned(s,a,w)); // ordinary cover reversal
     a=s;a.refs[0]=0;assert(!tc::layout(a));
+    assert(tc::pose_matches(w,w));
+    auto changed=w;changed[0]+=12800;assert(!tc::pose_matches(w,changed));
+    tc::sample matrices{};matrices.world=matrices.local={1,0,0,0,0,1,0,0,0,0,1,0,-69,2,18,1};
+    assert(tc::matrix_matches(matrices,p));matrices.world[12]=1.877;assert(!tc::matrix_matches(matrices,p));
     tc::pose q{};tc::integrate(q,1,1,1,0,0,0,.05,2);
     assert(std::abs(q[0]-.1)<1e-9&&std::abs(q[1]-.1)<1e-9&&std::abs(q[2]+.1)<1e-9);
     tc::pose upside{0,0,0,2.,0,0};tc::integrate(upside,0,0,0,0,0,0,.05,2);
