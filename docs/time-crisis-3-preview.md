@@ -13,3 +13,7 @@ Local model test command (Linux or other C++20 compiler):
     /tmp/tc3-camera-test
 
 Acceptance still pending: real PCSX2 2.0.2 and newer stock PINE, activation latency, sustained input cadence, output pose and visual correctness, native mode restoration without state rewind, natural track changes, resets and disconnects, all mission types, Direct3D renderer. Target <1s activation and 60–100 Hz control, not measured. No CI/CD.
+
+## Actual local verification
+
+The final standalone model header and test were transcribed from the fork and verified against exact Git blob hashes b12ad7860356c34c6d6ae521ae0b6f02ec8b24b4 and e945217bcf65050e0be0357f998bac93fef4cc8f using git hash-object. GCC C++20 with -Wall -Wextra -Werror and Clang C++20 with the same warnings plus -fsanitize=address,undefined both compiled and ran successfully; output: TC3 camera model checks passed. Tests cover signed pose encoding, bounds, changed streams, backwards clock/cursor, changed constant ownership, inactive context, steep pitch preservation and basic local movement. This is a synthetic standalone model test only. The PINE adapter, Windows UI, linking and original game execution are not tested in this environment. No binaries distributed. Upstream main unchanged.
