@@ -10,7 +10,7 @@ int main(){
     s.streams={0x13268b2,0x13268dc,0x13268fa,0x132691e,0x132693c,0x132695a};
     s.modes={5,5,5,5,5,0};
     assert(tc::layout(s)&&tc::original_modes(s.modes));
-    for(const auto& m: std::array<tc::words,5>{{{5,5,5,5,5,0},{5,5,5,1,5,0},{3,5,5,1,1,1},{5,3,5,5,5,0},{3,5,5,1,1,0}}}) {
+    for(const auto& m: std::array<tc::words,6>{{{5,5,5,5,5,0},{5,5,5,1,5,0},{3,5,5,1,1,1},{5,3,5,5,5,0},{3,5,5,1,1,0},{5,5,5,0,0,0}}}) {
         assert(tc::original_modes(m));
         auto b=s;b.modes=m;assert(tc::layout(b));
         b.modes=tc::held;assert(tc::owned(s,b,tc::words{}));

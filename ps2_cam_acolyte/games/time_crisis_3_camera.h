@@ -29,7 +29,7 @@ inline bool original_modes(const words& m) {
     // These are admission candidates, not live override qualification.
     return m == words{5,5,5,5,5,0} || m == words{5,5,5,1,5,0} ||
            m == words{3,5,5,1,1,1} || m == words{5,3,5,5,5,0} ||
-           m == words{3,5,5,1,1,0};
+           m == words{3,5,5,1,1,0} || m == words{5,5,5,0,0,0};
 }
 inline bool layout(const sample& s) {
     if (s.refs != std::array<uint32_t,3>{context,context,context} ||
