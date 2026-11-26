@@ -17,3 +17,7 @@ Acceptance still pending: real PCSX2 2.0.2 and newer stock PINE, activation late
 ## Actual local verification
 
 The final standalone model header and test were transcribed from the fork and verified against exact Git blob hashes b12ad7860356c34c6d6ae521ae0b6f02ec8b24b4 and e945217bcf65050e0be0357f998bac93fef4cc8f using git hash-object. GCC C++20 with -Wall -Wextra -Werror and Clang C++20 with the same warnings plus -fsanitize=address,undefined both compiled and ran successfully; output: TC3 camera model checks passed. Tests cover signed pose encoding, bounds, changed streams, backwards clock/cursor, changed constant ownership, inactive context, steep pitch preservation and basic local movement. This is a synthetic standalone model test only. The PINE adapter, Windows UI, linking and original game execution are not tested in this environment. No binaries distributed. Upstream main unchanged.
+
+## Test-focused update
+
+Activation now checks serial/revision and running VM status, prints the measured activation time and displays it in the UI. Camera track headers are read with aligned 16-bit PINE operations. The panel includes one-click movement and yaw tests without a second controller. Movement suspends while PCSX2 is paused; disabling still attempts guarded restoration. No claim of Windows compilation or live timing measurements.

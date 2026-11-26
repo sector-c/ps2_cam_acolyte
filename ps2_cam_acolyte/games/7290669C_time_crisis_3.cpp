@@ -8,6 +8,8 @@
 #include <windows.h>
 #include <bcrypt.h>
 #include <cstring>
+#include <chrono>
+#include <cstdio>
 #include <stdexcept>
 #include <memory>
 #include <vector>
@@ -40,6 +42,13 @@ public:
         std::unique_ptr<char[]> uuid(ipc.GetGameUUID());
         require(uuid && _stricmp(uuid.get(),"7290669C")==0,"Not the supported TC3 executable");
     }
+    void verify_revision() {
+        identity();
+        std::unique_ptr<char[]> serial(ipc.GetGameID()), version(ipc.GetGameVersion());
+        require(serial && std::strcmp(serial.get(),"SLUS-20645")==0 &&
+                version && std::strcmp(version.get(),"1.00")==0,"Unsupported TC3 disc revision");
+    }
+    bool running() { return ipc.Status()==PINE::Shared::Running; }
     tc::sample read() {
         ipc.InitializeBatch();
         for(auto a:{tc::context-8,tc::context-4,0x019a665cu})
@@ -105,8 +114,11 @@ public:
     }
     bool packed_layout(const tc::sample& s) {
         if(!tc::layout(s))return false;
-        auto bytes=read_span(s.streams[0]-16,16);
-        auto u16=[&](unsigned i){return unsigned(bytes[i])|(unsigned(bytes[i+1])<<8);};
+        // Packed headers can be only halfword-aligned, not word-aligned.
+        ipc.InitializeBatch();
+        for(unsigned i=0;i<8;++i)ipc.Read<uint16_t,true>(addr(s.streams[0]-16+2*i));
+        batch b(ipc);ipc.SendCommand(b.value);
+        auto u16=[&](unsigned i){return unsigned(half(b,i/2));};
         if((u16(0)&0xfe00)!=0xfe00 || u16(2)!=(s.header&0xffff))return false;
         uint64_t next=s.streams[0];
         for(unsigned i=0;i<6;++i) {
@@ -136,10 +148,17 @@ class time_crisis_3 final : public ps2_game {
     tc::pose target{};
     bool enabled=false, fault=false, toggle_requested=false, dirty=true;
     float speed=4.f;
+    int nudge=0;
+    double activation_ms=0;
+    unsigned writes=0;
+    bool paused_notice=false;
     std::string status="Ready. Start gameplay, then press A or Enable.";
     void report(const char* s){status=s;dirty=true;}
     void enable() {
-        io.identity();io.verify_code();
+        const auto begin=std::chrono::steady_clock::now();
+        io.verify_revision();
+        require(io.running(),"Resume PCSX2 first (do not use emulator pause).");
+        io.verify_code();
         const auto a=io.read();
         require(tc::original_modes(a.modes)&&io.packed_layout(a),
                 "No qualified primary camera track in this scene");
@@ -152,11 +171,16 @@ class time_crisis_3 final : public ps2_game {
         original=previous=b;
         // Treat failed acknowledgements as possibly applied.
         fault=true;
-        io.identity();io.write(initial,&tc::held);
+        io.identity();
+        require(io.running(),"PCSX2 paused during activation");
+        io.write(initial,&tc::held);
         const auto after=io.read();
         require(tc::owned(original,after,initial),"Camera ownership could not be verified; restart game");
         last=initial;previous=after;enabled=true;fault=false;
+        activation_ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-begin).count();
+        writes=0;paused_notice=false;
         report("Freecam active (experimental gameplay camera).");
+        std::printf("TC3 activation: %.1f ms\n",activation_ms);
     }
     void disable() {
         if(!enabled)return;
@@ -189,6 +213,18 @@ public:
         ImGui::Text("Controller: %s toggles freecam",c.get_button_display_name(controller_bindings::freecam));
         ImGui::TextUnformatted("Left stick: move | Right stick: look | Triggers: elevation | LB/RB: roll");
         ImGui::SliderFloat("Speed",&speed,.25f,20.f);
+        if(enabled) {
+            ImGui::Text("Activation: %.1f ms | movement writes: %u",activation_ms,writes);
+            ImGui::TextUnformatted("Test movement without a controller:");
+            if(ImGui::Button("Forward"))nudge=1; ImGui::SameLine();
+            if(ImGui::Button("Back"))nudge=2; ImGui::SameLine();
+            if(ImGui::Button("Left"))nudge=3; ImGui::SameLine();
+            if(ImGui::Button("Right"))nudge=4;
+            if(ImGui::Button("Up"))nudge=5; ImGui::SameLine();
+            if(ImGui::Button("Down"))nudge=6; ImGui::SameLine();
+            if(ImGui::Button("Yaw +10"))nudge=7; ImGui::SameLine();
+            if(ImGui::Button("Yaw -10"))nudge=8;
+        }
         replay.draw_playback_ui(c);
         if(fault)ImGui::TextWrapped("Restart the game to clear an uncertain override. No automatic writes will be attempted.");
     }
@@ -200,6 +236,12 @@ public:
             if(toggle){if(enabled)disable();else enable();return;}
             if(!enabled)return;
             io.identity();
+            if(!io.running()) {
+                nudge=0;
+                if(!paused_notice)report("Emulator paused. Resume PCSX2 to see camera movement.");
+                paused_notice=true;return;
+            }
+            if(paused_notice){paused_notice=false;report("Freecam active (experimental gameplay camera).");}
             const auto now=io.read();
             if(!tc::owned(previous,now,last)) {
                 enabled=false;fault=tc::same_track(previous,now)||!tc::original_modes(now.modes);
@@ -213,6 +255,15 @@ public:
                               (c.button(controller_bindings::l1)?1.:0.);
             tc::integrate(target,l.first,-l.second,c.get_right_trigger()-c.get_left_trigger(),
                           -r.first,-r.second,roll,dt,speed);
+            if(nudge>=1&&nudge<=6) {
+                const double side=nudge==3?-1.:nudge==4?1.:0.;
+                const double front=nudge==1?1.:nudge==2?-1.:0.;
+                const double up=nudge==5?1.:nudge==6?-1.:0.;
+                tc::integrate(target,side,front,up,0,0,0,.05,10.);
+            } else if(nudge==7||nudge==8) {
+                target[4]=std::remainder(target[4]+(nudge==7?1.:-1.)*tc::pi/18,2*tc::pi);
+            }
+            nudge=0;
             float yaw=static_cast<float>(target[4]),pitch=static_cast<float>(target[3]);
             float x=static_cast<float>(target[0]),y=static_cast<float>(target[1]),z=static_cast<float>(target[2]);
             if(replay.update(dt,yaw,pitch,x,y,z)) {
@@ -224,6 +275,7 @@ public:
                 // Only six constants (18 bytes) in normal motion; never reassert selectors.
                 io.write(next,nullptr);
                 last=next;
+                ++writes;
             }
         } catch(const std::exception& e) {
             fault=fault||enabled;enabled=false;report(e.what());
