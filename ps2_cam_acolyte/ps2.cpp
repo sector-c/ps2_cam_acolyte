@@ -22,6 +22,7 @@ pcsx2::pcsx2(const controller* camera_controller, controller* game_controller, p
 
 pcsx2::~pcsx2()
 {
+    if (current_game) current_game->shutdown();
     determine_game_command.Free();
 }
 
@@ -81,7 +82,7 @@ bool pcsx2::update()
         camera_playback.clear();
     }
 
-    if (camera_playback.needs_render())
+    if ((current_game && current_game->consume_ui_dirty()) || camera_playback.needs_render())
     {
         return true;
     }

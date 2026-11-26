@@ -152,6 +152,7 @@ copy "$(ProjectDir)\..\third_party\sdl_gamecontrollerdb\gamecontrollerdb.txt" "$
     <ClCompile Include="controller.cpp" />
     <ClCompile Include="games\00000000_nothing.cpp" />
     <ClCompile Include="games\053D2239_metal_gear_solid_3.cpp" />
+    <ClCompile Include="games\7290669C_time_crisis_3.cpp" />
     <ClCompile Include="games\3919136D_silent_hill_4.cpp" />
     <ClCompile Include="games\61A7E622_silent_hill_shattered_memories.cpp" />
     <ClCompile Include="games\6BBD4932_silent_hill_2_directors_cut_eu.cpp" />
@@ -461,6 +462,7 @@ copy "$(ProjectDir)\..\third_party\sdl_gamecontrollerdb\gamecontrollerdb.txt" "$
     <ClInclude Include="..\third_party\imgui\imstb_textedit.h" />
     <ClInclude Include="..\third_party\imgui\imstb_truetype.h" />
     <ClInclude Include="..\third_party\pine\src\pine.h" />
+    <ClInclude Include="games\time_crisis_3_camera.h" />
     <ClInclude Include="controller.h" />
     <ClInclude Include="controller_bindings.h" />
     <ClInclude Include="games\shared_silent_hill_2.h" />
