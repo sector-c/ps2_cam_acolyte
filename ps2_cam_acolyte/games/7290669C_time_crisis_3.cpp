@@ -160,8 +160,9 @@ class time_crisis_3 final : public ps2_game {
         require(io.running(),"Resume PCSX2 first (do not use emulator pause).");
         io.verify_code();
         const auto a=io.read();
-        require(tc::original_modes(a.modes)&&io.packed_layout(a),
-                "No qualified primary camera track in this scene");
+        require(tc::layout(a),"No active gameplay camera (menu or loading screen); enter gameplay.");
+        require(tc::original_modes(a.modes),"Unrecognized camera channel modes; capture a diagnostic.");
+        require(io.packed_layout(a),"Packed camera track layout mismatch.");
         const auto b=io.read();
         require(tc::same_track(a,b)&&a.modes==b.modes,
                 "Camera changed during activation; retry in a stable scene");

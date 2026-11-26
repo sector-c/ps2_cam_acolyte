@@ -21,3 +21,7 @@ The final standalone model header and test were transcribed from the fork and ve
 ## Test-focused update
 
 Activation now checks serial/revision and running VM status, prints the measured activation time and displays it in the UI. Camera track headers are read with aligned 16-bit PINE operations. The panel includes one-click movement and yaw tests without a second controller. Movement suspends while PCSX2 is paused; disabling still attempts guarded restoration. No claim of Windows compilation or live timing measurements.
+
+## Mission compatibility update (2026-11-26)
+
+Owner reports standalone validation instrument works in Arcade. Read-only original-game diagnostic confirms matching original fingerprints, active primary context, 18 samples, format 1, packed pointer/bounds checks in Rescue stage 1 (3,5,5,1,1,1; tag FE16), Rescue stage 14 (5,3,5,5,5,0; FE19), Crisis day 1 mission 1 (3,5,5,1,1,0; FE16). Secondary camera inactive in all three. Add only these three observed mode tuples to the existing two. Keep original revision, code, layout, packed pointers, range and ownership guards. No claim of live writes or restoration in these missions yet. Calibration and main menu show zeroed contexts; no gameplay-camera writes allowed there. Menu rendering requires separate investigation. No private diagnostic log or original payload committed. Standalone validation tool and full Acolyte remain distinct; owner confirmation refers to the former.

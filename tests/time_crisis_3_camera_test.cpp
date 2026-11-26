@@ -10,6 +10,15 @@ int main(){
     s.streams={0x13268b2,0x13268dc,0x13268fa,0x132691e,0x132693c,0x132695a};
     s.modes={5,5,5,5,5,0};
     assert(tc::layout(s)&&tc::original_modes(s.modes));
+    for(const auto& m: std::array<tc::words,5>{{{5,5,5,5,5,0},{5,5,5,1,5,0},{3,5,5,1,1,1},{5,3,5,5,5,0},{3,5,5,1,1,0}}}) {
+        assert(tc::original_modes(m));
+        auto b=s;b.modes=m;assert(tc::layout(b));
+        b.modes=tc::held;assert(tc::owned(s,b,tc::words{}));
+    }
+    assert(!tc::original_modes(tc::held));
+    assert(!tc::original_modes(tc::words{}));
+    assert(!tc::layout(tc::sample{}));
+    assert(!tc::original_modes(tc::words{3,3,3,1,1,1}));
     tc::pose p{-69.,2.,18.,0.,0.,0.};
     tc::words w{};
     assert(tc::encode(p,w));
