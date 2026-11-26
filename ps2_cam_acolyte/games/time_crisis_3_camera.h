@@ -71,7 +71,7 @@ inline bool encode(const pose& p,words& out) {
 inline void integrate(pose& p,double strafe,double forward,double up,
                       double yaw,double pitch,double roll,double dt,double speed) {
     dt=std::clamp(dt,0.,0.05);
-    p[3]=std::clamp(p[3]+pitch*dt*2.,-pi/2+.001,pi/2-.001);
+    p[3]=std::remainder(p[3]+pitch*dt*2.,2*pi);
     p[4]=std::remainder(p[4]+yaw*dt*2.,2*pi);
     p[5]=std::remainder(p[5]+roll*dt,2*pi);
     const auto sx=std::sin(p[3]),cx=std::cos(p[3]);

@@ -1,4 +1,7 @@
 // Original contribution under the repository's BSD-3-Clause license.
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include "../ps2.h"
 #include "imgui.h"
 #include "time_crisis_3_camera.h"
@@ -161,7 +164,7 @@ class time_crisis_3 final : public ps2_game {
         const auto now=io.read();
         if(!tc::owned(previous,now,last)) {
             enabled=false;
-            fault=now.modes==tc::held;
+            fault=tc::same_track(previous,now)||!tc::original_modes(now.modes);
             report(fault?"Camera ownership lost; restart the game before retrying.":
                          "Native camera replaced the track; no stale writes made.");
             return;
@@ -169,7 +172,7 @@ class time_crisis_3 final : public ps2_game {
         fault=true;enabled=false;
         io.write(original.constants,&original.modes);
         const auto after=io.read();
-        require(tc::same_track(now,after)&&after.modes==original.modes,
+        require(tc::same_track(now,after)&&after.modes==original.modes&&after.constants==original.constants,
                 "Camera restoration not confirmed; restart game");
         fault=false;report("Original camera modes restored.");
     }
@@ -199,7 +202,7 @@ public:
             io.identity();
             const auto now=io.read();
             if(!tc::owned(previous,now,last)) {
-                enabled=false;fault=now.modes==tc::held;
+                enabled=false;fault=tc::same_track(previous,now)||!tc::original_modes(now.modes);
                 report(fault?"Camera ownership lost; restart game.":
                              "Scene changed; enable again in the new scene.");
                 return;

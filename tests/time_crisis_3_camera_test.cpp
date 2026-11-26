@@ -23,6 +23,8 @@ int main(){
     a=s;a.refs[0]=0;assert(!tc::layout(a));
     tc::pose q{};tc::integrate(q,1,1,1,0,0,0,.05,2);
     assert(std::abs(q[0]-.1)<1e-9&&std::abs(q[1]-.1)<1e-9&&std::abs(q[2]+.1)<1e-9);
+    tc::pose upside{0,0,0,2.,0,0};tc::integrate(upside,0,0,0,0,0,0,.05,2);
+    assert(upside[3]==2.); // idle input never snaps an existing steep pitch
     p[0]=201;assert(!tc::encode(p,w));
     p[0]=std::numeric_limits<double>::quiet_NaN();assert(!tc::encode(p,w));
     p={-200,200,0,0,tc::pi,0};assert(tc::encode(p,w));assert(w[4]==32768);

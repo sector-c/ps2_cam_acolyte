@@ -98,7 +98,7 @@
       <Filter>Source Files\games</Filter>
     </ClCompile>
     <ClCompile Include="games\7290669C_time_crisis_3.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\games</Filter>
     </ClCompile>
     <ClCompile Include="games\3919136D_silent_hill_4.cpp">
       <Filter>Source Files\games</Filter>
@@ -108,6 +108,9 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="games\time_crisis_3_camera.h">
+      <Filter>Source Files\games</Filter>
+    </ClInclude>
     <ClInclude Include="controller.h">
       <Filter>Source Files</Filter>
     </ClInclude>
