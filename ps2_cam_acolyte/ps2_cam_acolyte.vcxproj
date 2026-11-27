@@ -463,6 +463,7 @@ copy "$(ProjectDir)\..\third_party\sdl_gamecontrollerdb\gamecontrollerdb.txt" "$
     <ClInclude Include="..\third_party\imgui\imstb_truetype.h" />
     <ClInclude Include="..\third_party\pine\src\pine.h" />
     <ClInclude Include="games\time_crisis_3_camera.h" />
+    <ClInclude Include="games\time_crisis_3_producer.h" />
     <ClInclude Include="controller.h" />
     <ClInclude Include="controller_bindings.h" />
     <ClInclude Include="games\shared_silent_hill_2.h" />
