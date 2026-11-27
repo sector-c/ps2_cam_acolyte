@@ -2,6 +2,12 @@
 
 This is a lightweight Windows exe for using camera hacks and other cheats/debugging tools on PS2 games running on the PCSX2 emulator. Just run ps2_cam_acolyte.exe while playing a game in PS2, connect a second controller and use it to fly the camera around, enable/disable lighting, etc.
 
+## Fork-specific development: Time Crisis 3
+
+The active TC3 implementation is the **P1 camera-producer hook** (US retail SLUS-20645 / CRC 7290669C / revision 1.00), replacing the experimental animation-track overrides. The owner reports the standalone P1 Windows x64 verification tool appears to work in actual PCSX2 gameplay. This is provisional live acceptance, not qualification of all scenes, native freeze, restoration, or the full Acolyte GUI. The C++ module is the active fork implementation; full Visual Studio build and live controller tests remain pending. Upstream Acolyte releases do not yet include this support.
+
+See [producer hook design and limits](docs/time-crisis-3-producer-hook.md) and [P1 verification package manifest](tools/tc3-producer-validation/README.md). The legacy research implementation is preserved on [feature/time-crisis-3](https://github.com/sector-c/ps2_cam_acolyte/tree/feature/time-crisis-3). No game files or GPL-covered implementation are imported. Preserve BSD-3-Clause and third-party notices; no CI/CD.
+
 ### **Game Support**
 
 Support is currently focused on PS2 horror games(in particular early prototypes), and will expand over time. Every game supports a free cam mode, but some games have other cheats or debugging tools such as disabling shadows or pausing gameplay.
