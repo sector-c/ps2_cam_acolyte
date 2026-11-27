@@ -14,7 +14,7 @@ Owner-tested standalone console instrument, not the full Acolyte GUI. This is th
 
 ## Package placement and status
 
-Place the original executable, six Go source files under source/, README and original notices under licenses/ in this directory. SHA256SUMS.txt records the exact package inventory. **Binary/source upload pending at initial adoption**: local executable verified, but the available GitHub connection cannot ingest local binary bytes and the sandbox has no direct Git network. The owner has a repo-ready upload bundle to preserve the exact artifact. Do not interpret this manifest as a binary upload receipt. After upload, compare hashes and confirm the commit. Do not commit runtime logs, game data, original ELF, ISO, saves, BIOS or captures.
+Place the original executable, six Go source files under source/, README and original notices under licenses/ in this directory. SHA256SUMS.txt records the exact package inventory. **Binary/source included:** exact original archive payloads verified against SHA256SUMS.txt before staging. The executable is the owner-tested P1 artifact, not a rebuild. Do not commit runtime logs, game data, original ELF, ISO, saves, BIOS or captures.
 
 The source is BSD-3-Clause; the executable includes Go runtime code with its separate license and patent notice. Keep all notices distributed with the executable. No proprietary game data in the package. The private original ELF fixture is not distributed; optional tests skip without it.
 

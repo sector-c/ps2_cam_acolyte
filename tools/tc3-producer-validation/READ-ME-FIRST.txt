@@ -1,0 +1,42 @@
+TC3 PRODUCER HOOK P1 (experimental standalone validation instrument)
+=================================================================
+Target: US Time Crisis 3, SLUS-20645, CRC 7290669C, rev 1.00.
+Windows x64, stock PCSX2 PINE TCP 28011. No ISO or save states.
+
+Close ALL V1-V9 tools and restart TC3 once before testing (old tools
+may have left constant selectors in the original camera system).
+Play single-player Arcade; the platform in Stage 2 Area 2 is ideal.
+Keep PCSX2 itself running. Native game freeze is permitted; no stable
+cover, terminal animation sample, or parent inference is required.
+Run TC3-Producer-Hook-P1.exe and type enable, then press Enter.
+Move: w/a/s/d, q/e, left/right/up/down (Enter after each command).
+Try status before and after movement with gameplay frozen. It prints
+native pause, simulation and main loop counters, and three matrices.
+Type disable to restore native code, quit to restore and exit.
+Send TC3-Producer-Hook.log if publication fails.
+
+P1 replaces the original JAL at 0x180260 with NOP and writes only the
+primary camera world matrix 0x019A5840. The original downstream copy
+and view generation should publish the matrix to 0x00441A50 and
+0x01EA9980. It does not touch selectors, parent or pause fields.
+The separate 0x180190 route remains unchanged. No stable-cover or
+track mode restrictions, but valid primary render context required.
+Do not switch multiplayer/modes, shoot, or load/save emulator states
+while enabled. Native gameplay aiming may change. Restore before
+leaving gameplay. This is not yet an independent spectator renderer.
+
+Close via quit. If a forced termination left P1's NOP behind, close
+all tools first, reconnect to the same running game and type recover.
+Recover restores only the exact known P1 patch with matching original
+code fingerprints. If uncertain, reset TC3. This is not a recovery
+command for V1-V9 track overrides.
+
+Five tests, three race-enabled runs, passed using private original ELF
+code spans and a simulated PINE guest. Frozen simulation counter with
+advancing render counter, matrix publication, missing publication,
+known orphan and unknown patch refusal tested. Windows x64 compilation
+and Go vet passed. No actual PCSX2/native Windows trial. Stock PINE is
+not atomic with guest execution; JIT instruction invalidation and
+actual game rendering during native freeze are unverified. The code
+patch is RAM-only and does not modify your ISO. No game data included.
+The full Acolyte C++ port is on feature/tc3-producer-hook, unbuilt.
